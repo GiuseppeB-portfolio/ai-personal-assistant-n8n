@@ -1,0 +1,455 @@
+{
+  "name": "AI Personal Assistant | Telegram + OpenAI + Human Approval",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.message?.text ? $json.message.text : \"Il seguente testo è la trascrizione di un messaggio vocale Telegram. Non richiedere nuovamente il file audio: è già stato trascritto. Rispondi alla richiesta contenuta nel testo:\\n\\n\" + $json.text }}",
+        "options": {
+          "systemMessage": "=# RUOLO E OBIETTIVO\n\nSei un assistente AI personale integrato con n8n. Comunichi in italiano, in modo chiaro, professionale e cordiale.\n\nIl tuo compito è aiutare l'utente a:\n- Cercare informazioni nella rubrica Airtable.\n- Preparare e inviare email tramite Gmail.\n- Creare appuntamenti su Google Calendar.\n- Mantenere il contesto delle conversazioni attraverso Simple Memory.\n\n# DATA E ORA ATTUALI\n\nData e ora correnti: {{ $now.setZone('Europe/Rome').toFormat('dd/MM/yyyy HH:mm:ss') }}\n\nFuso orario: Europe/Rome.\n\nUtilizza questa informazione per interpretare correttamente espressioni come \"oggi\", \"domani\", \"lunedì prossimo\" e \"tra due ore\".\n\nNon inventare date o orari. Quando una richiesta temporale è ambigua, chiedi chiarimenti prima di eseguire azioni.\n\n# REGOLA PRINCIPALE: CONSULTAZIONE DELLA RUBRICA\n\nPrima di eseguire azioni con Gmail o Google Calendar, consulta il tool \"Search records in Airtable\" per verificare se esistono informazioni pertinenti sui contatti coinvolti.\n\nSe la richiesta riguarda una persona specifica:\n1. Cerca il contatto nella rubrica Airtable.\n2. Controlla che nome, cognome, email e altri dati corrispondano alla persona richiesta.\n3. Se trovi più persone con lo stesso nome, chiedi all'utente quale intende.\n4. Se il contatto non esiste, non inventare informazioni. Utilizza eventuali dati esplicitamente forniti dall'utente oppure chiedi quelli mancanti.\n\nLa rubrica può essere vuota: in questo caso puoi comunque svolgere operazioni personali che non richiedono dati di contatto.\n\n# UTILIZZO DI GMAIL\n\nQuando l'utente richiede l'invio di un'email:\n1. Consulta prima la rubrica Airtable.\n2. Identifica il destinatario e verifica il suo indirizzo email.\n3. Prepara un oggetto chiaro e un messaggio coerente con la richiesta.\n4. Presenta all'utente destinatario, oggetto e contenuto.\n5. Chiedi conferma esplicita prima di inviare.\n6. Dopo la conferma, utilizza \"Send a message in Gmail\".\n7. Comunica l'avvenuto invio soltanto se il tool ha restituito un risultato positivo.\n\nNon inviare email a destinatari non verificati e non inventare indirizzi email.\n\n# UTILIZZO DI GOOGLE CALENDAR\n\nQuando l'utente richiede la creazione di un evento:\n1. Consulta la rubrica Airtable per identificare eventuali contatti coinvolti.\n2. Identifica titolo, data, ora iniziale, ora finale e descrizione.\n3. Interpreta date e orari usando il fuso Europe/Rome.\n4. Se manca un'informazione indispensabile, chiedila.\n5. Mostra un riepilogo dell'evento e chiedi conferma prima della creazione.\n6. Dopo la conferma, utilizza \"Create an event in Google Calendar\".\n7. Comunica la creazione soltanto se il tool conferma il successo.\n\nNon creare eventi duplicati intenzionalmente. Se l'utente richiede una verifica di disponibilità, non affermare che un orario sia libero senza avere consultato effettivamente il calendario.\n\n# MEMORIA CONVERSAZIONALE\n\nUtilizza Simple Memory per ricordare il contesto della conversazione corrente.\n\nNon considerare un precedente errore tecnico come prova che un tool sia ancora inutilizzabile.\n\nSe un tool fallisce, comunica il problema reale senza inventare risultati. Se l'utente chiede di riprovare, effettua un nuovo tentativo quando appropriato.\n\n# REGOLE GENERALI\n\n- Usa i tool disponibili quando necessari.\n- Non inventare contatti, indirizzi email, eventi o risultati.\n- Non dichiarare di aver completato un'azione senza conferma del tool.\n- Chiedi chiarimenti quando mancano dati essenziali.\n- Evita azioni non richieste.\n- Non rivelare credenziali, token o informazioni riservate.\n- Rispondi sempre in italiano, salvo diversa richiesta dell'utente.\n# GESTIONE DEI MESSAGGI VOCALI TELEGRAM\n\nI messaggi vocali Telegram vengono automaticamente convertiti in testo prima di raggiungerti.\n\nQuando ricevi una trascrizione:\n- Interpretala come una normale richiesta dell'utente.\n- Esegui le attività richieste utilizzando i tool disponibili, quando appropriato.\n- Non chiedere di caricare nuovamente il file audio.\n- Non mostrare automaticamente la trascrizione.\n- Mostra il testo trascritto soltanto quando l'utente lo richiede esplicitamente.\n- Mantieni le stesse regole di sicurezza previste per i messaggi scritti.\n- Prima di inviare email o creare eventi, richiedi conferma e rispetta il sistema di approvazione tecnica.\n\nRispondi in italiano, in modo naturale e conciso."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        752,
+        0
+      ],
+      "id": "a273f1e0-6aa8-4e47-b848-600e6ae0e5a2",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini",
+          "cachedResultName": "gpt-5-mini",
+          "cachedResultUrl": ""
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        384,
+        368
+      ],
+      "id": "c411880b-485f-4cf6-be03-f5b5e5034a4b",
+      "name": "OpenAI Chat Model"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Telegram Trigger').first().json.message.chat.id.toString() }}",
+        "contextWindowLength": 15
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        576,
+        368
+      ],
+      "id": "b6357f57-f51f-4724-80ab-59b2a0d3924f",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_AIRTABLE_BASE_ID",
+          "mode": "list",
+          "cachedResultName": "Contacts base"
+        },
+        "table": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_AIRTABLE_TABLE_ID",
+          "mode": "list",
+          "cachedResultName": "Contacts"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtableTool",
+      "typeVersion": 2.2,
+      "position": [
+        752,
+        368
+      ],
+      "id": "48835a7d-bcc9-4035-bfe6-3877bd6053d3",
+      "name": "Search records in Airtable"
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "REPLACE_WITH_YOUR_CALENDAR_ID",
+          "mode": "list",
+          "cachedResultName": "My calendar"
+        },
+        "start": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Start', ``, 'string') }}",
+        "end": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('End', ``, 'string') }}",
+        "additionalFields": {
+          "description": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Description', ``, 'string') }}",
+          "summary": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Summary', ``, 'string') }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        1200,
+        368
+      ],
+      "id": "c6112dd6-5ccf-4025-a301-d131d5c3adbb",
+      "name": "Create an event in Google Calendar"
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        0,
+        0
+      ],
+      "id": "61ff1782-8a50-4795-94af-53f716a1a3ff",
+      "name": "Telegram Trigger"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').first().json.message.chat.id }}",
+        "text": "={{ $json.output }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1168,
+        0
+      ],
+      "id": "ead4ed16-c932-4444-af72-c4f428a85bed",
+      "name": "Send a text message"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "972f8d94-9517-4221-b118-1ae557c3c46d",
+              "leftValue": "={{ $json.message.chat.id.toString() }}",
+              "rightValue": "REPLACE_WITH_YOUR_TELEGRAM_CHAT_ID",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": "",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        256,
+        0
+      ],
+      "id": "dc992e01-331f-400b-9e2b-37a0c8188054",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "message": "=🔐 RICHIESTA DI AUTORIZZAZIONE\n\nTool: {{ $tool.name }}\n\nParametri:\n{{ JSON.stringify($tool.parameters, null, 2) }}\n\nAutorizzi questa operazione?",
+        "chatId": "REPLACE_WITH_YOUR_TELEGRAM_CHAT_ID",
+        "approvalOptions": {
+          "values": {
+            "approvalType": "double",
+            "approveLabel": "✅ Approva",
+            "disapproveLabel": "❌ Rifiuta"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.telegramHitlTool",
+      "typeVersion": 1.2,
+      "position": [
+        1024,
+        208
+      ],
+      "id": "07655bc2-333d-479f-8e62-174ed8dad4a9",
+      "name": "Telegram"
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('To', ``, 'string') }}",
+        "subject": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Subject', ``, 'string') }}",
+        "emailType": "text",
+        "message": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Message', ``, 'string') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.2,
+      "position": [
+        960,
+        368
+      ],
+      "id": "0328ccf9-f851-4c83-b4a5-a1cc55a973d2",
+      "name": "Invio email Gmail"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 4
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.message.text }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "exists",
+                      "singleValue": true
+                    },
+                    "id": "fbd21ed5-32e3-482d-a21a-ad50796d8851"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 4
+                },
+                "conditions": [
+                  {
+                    "id": "336062da-f6f0-40a7-bbb8-f3342aa84c88",
+                    "leftValue": "={{ $json.message?.voice?.file_id }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "string",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.5,
+      "position": [
+        528,
+        0
+      ],
+      "id": "5137a0bb-54fa-4dc2-a791-f6b705e978b2",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $json.message.voice.file_id }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        368
+      ],
+      "id": "7d01be6c-4995-4c84-822c-62e2af9adef9",
+      "name": "Get a file"
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "transcribe",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        560,
+        576
+      ],
+      "id": "c795818b-356a-4fcb-baae-f5307f2e4ce5",
+      "name": "Transcribe a recording"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search records in Airtable": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create an event in Google Calendar": {
+      "ai_tool": [
+        [
+          {
+            "node": "Telegram",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Invio email Gmail": {
+      "ai_tool": [
+        [
+          {
+            "node": "Telegram",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get a file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a file": {
+      "main": [
+        [
+          {
+            "node": "Transcribe a recording",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcribe a recording": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "nodeGroups": [],
+  "tags": []
+}
